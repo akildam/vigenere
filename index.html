@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cifra de Vigenère</title>
+    <style>
+        html {
+            box-sizing: border-box;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        :root{
+            --cinza-claro: #bbbbbb;
+            --cinza-medio: #474747;
+            --cinza-escuro: #333;
+            --azul-claro: #b8d4ff;
+            --azul-escuro: #719fe6;
+            --verde-claro: #b7d7c8;
+            --verde-escuro: #6ea88d;
+            --background: #f3f3f3;
+            --branco: #fff;
+            --shadow: #aaaaaa;
+        }
+        body{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            grid-template-areas: '. container .';
+        }
+        #container{
+            padding: 20px;
+            grid-area: container;
+            background:var(--background);
+            box-shadow: 0px 0px 5px 0px var(--shadow);
+            border-radius: 5px;
+        }
+        
+        .tabula-recta {
+            display: grid;
+            background:var(--branco);
+            grid-template-columns: 1fr 26fr;
+            grid-template-rows: 1fr 26fr;
+            max-height: 542px;
+            max-width: 542px;
+            text-align: center;
+            border: 1px solid var(--cinza-claro);
+            font-family: 'Consolas', Courier, monospace;
+            font-size: clamp(.8rem, .8vw, 1.0rem);
+            border-radius: 5px;
+        }
+        #tabula-rows {
+            display: grid;
+            border-right: 1px solid var(--cinza-medio);
+            background: var(--azul-claro);
+        }
+        #tabula-cols {
+            display: grid;
+            grid-auto-flow: column;
+            border-bottom: 1px solid var(--cinza-medio);
+            background: var(--verde-claro);
+        }
+        #tabula-content {
+            display: grid;
+            grid-template-columns: repeat(26, 1fr);
+            grid-template-rows: repeat(26, 1fr);
+        }
+        .text-right {
+            text-align: right;
+        }
+        .fundo-azul-claro {
+            background:var(--azul-claro);
+            transition: background 0.5s ease;
+        }
+        .fundo-verde-claro {
+            background:var(--verde-claro);
+            transition: background 0.5s ease;
+        }
+        .fundo-azul-escuro {
+            background:var(--azul-escuro);
+            transition: background 0.5s ease;
+        }
+        .fundo-verde-escuro {
+            background:var(--verde-escuro);
+            transition: background 0.5s ease;
+        }
+        .destaque-caractere{
+            font-weight:bold;
+            background:var(--cinza-escuro);
+            color:var(--branco)
+        }
+        input {
+            font-family: 'Consolas', monospace;
+            font-size: 16px;
+            padding:3px;
+            text-transform: uppercase;
+            border-radius: 5px;
+        }
+        h1 {margin-top: 0px;}
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <h1>Cifra de Vigenère</h1>
+        <div>Observações:
+            <ul>
+                <li>Todos os caracteres que não forem do alfabeto (A-Z), serão removidos.</li>
+                <li>Caso a chave não seja do mesmo tamanho da mensagem, ela será modificada para ter o mesmo tamanho da mensagem.</li>
+            </ul>
+        </div>
+        <table>
+            <tr>
+                <td class="text-right">Mensagem:</td>
+                <td  >
+                    <input id="mensagem-original" class="fundo-verde-claro" type="text">
+                </td>
+            </tr>
+            <tr>
+                <td class="text-right">Chave:</td>
+                <td >
+                    <input id="chave" class="fundo-azul-claro" type="text">
+                </td>
+            </tr>
+            <tr>
+                <td class="text-right">Criptografada:</td>
+                <td  >
+                    <input id="mensagem-criptografada" class="destaque-caractere" type="text">
+                </td>
+            </tr>
+        </table>
+        <br>
+        <span>Velocidade:</span>
+        <select id="velocidade" title="Velocidade em segundos">
+            <option value="0">0.0s</option>
+            <option value="1000">1.0s</option>
+            <option value="1500"selected>1.5s</option>
+            <option value="2000">2.0s</option>
+            <option value="2500">2.5s</option>
+        </select>
+        <button id="start" onclick="start()">► Iniciar</button>
+        <span id="iteracao"></span>
+        <br><br>
+        <div class="tabula-recta">
+            <div></div>
+            <div id="tabula-cols"></div>
+            <div id="tabula-rows"></div>
+            <div id="tabula-content"></div>
+        </div>
+    </div>
+
+</body>
+
+<script>
+    a ="ABCDEFGHIJKLMNOPQRSTUVWXYZ"; // alfabeto
+   
+    tabulaHeaderColumn();
+    tabulaContent();
+
+    // Monta os cabeçalhos (linha e coluna) da "Tabula Recta"
+    function tabulaHeaderColumn(){
+        x = "";
+        y = "";
+        for(i=0; i<26; i++) {
+            x += "<span class='col col-"+a.charAt(i)+"'>"+a.charAt(i)+"</span>";
+            y += "<span class='row row-"+a.charAt(i)+"'>"+a.charAt(i)+"</span>";
+        }
+        document.getElementById("tabula-cols").innerHTML = x;
+        document.getElementById("tabula-rows").innerHTML = y;
+    }
+    
+    // Monta as células da "Tabula Recta"
+    function tabulaContent(){
+        cifrasDeCesar = "";
+        for(i=0;i<26;i++) {
+            cifraDeCesar = a.substring(i) + a.substring(0,i);
+            for(j=0;j<26;j++) {
+                cifrasDeCesar += "<span id="+a.charAt(i)+"-"+a.charAt(j)+" class='tabula-cell row-"+a.charAt(i)+" col-"+a.charAt(j)+"'>"+cifraDeCesar.charAt(j)+"</span>";
+            }
+        }
+        document.getElementById("tabula-content").innerHTML = cifrasDeCesar;
+    }
+
+    // Inicia a criptografia
+    function start(){
+        
+
+        m = document.getElementById("mensagem-original").value; // Mensagem original
+        c = document.getElementById("chave").value; // Chave
+        m = m.toUpperCase().replace(/[^A-Z]/g,'');
+        document.getElementById("mensagem-original").value = m;
+        
+        if(m.length==0){
+            alert('Preencha o campo da mensagem.');
+            return;
+        }
+
+        c = c.toUpperCase().replace(/[^A-Z]/g,'').substring(0,m.length);
+        if(c.length==0){
+            alert('Preencha o campo da chave.');
+            return;
+        }
+        
+        if(c.length < m.length){
+            while(c.length < m.length){
+                c += c;
+            }
+            c = c.substring(0,m.length);
+        }
+        
+        document.getElementById("chave").value = c;
+        
+        
+        desabilitarBotao();
+        var i = 0;
+        var mensagemCriptografada = "";
+        var intervalID = setInterval(function () {
+            
+            // Equação para cifrar cada um dos caracteres
+            // Ci = (Pi + Ki) % 26
+            P  = c.charAt(i);  // Letra da CHAVE (na posição "i")
+            K  = m.charAt(i);  // Letra da MENSAGEM (na posição "i")
+            Pi = a.indexOf(P); // Posição da letra da CHAVE, no Alfabeto
+            Ki = a.indexOf(K); // Posição da letra da MENSAGEM, no Alfabeto
+            Ci = a.charAt((Pi + Ki) % 26); // Letra cifrada
+            mensagemCriptografada += Ci;
+            
+            limpaEstilos();
+
+            estilizar(P,K);
+
+            exibirMensagemCriptografada(mensagemCriptografada);
+
+            document.getElementById('iteracao').innerHTML = "Iteração: "+(i+1)+" de "+ m.length;
+            // finaliza a iteração
+            if (++i === m.length) {
+                habilitarBotao();
+                window.clearInterval(intervalID);
+            }
+        }, document.getElementById('velocidade').value);
+    }
+
+    // Desabilita botão iniciar
+    function desabilitarBotao(){
+        document.getElementById('start').disabled = true;
+    }
+
+    // Habilita botão iniciar
+    function habilitarBotao(){
+        document.getElementById('start').disabled = false;
+    }
+
+    // Limpa os estilos aplicados na "Tabula Recta"
+    function limpaEstilos(){
+        document.querySelectorAll('#tabula-cols .col').forEach(function(e){e.classList.remove('fundo-verde-escuro')});
+        document.querySelectorAll('#tabula-rows .row').forEach(function(e){e.classList.remove('fundo-azul-escuro')});
+        document.querySelectorAll('.tabula-cell').forEach(function(e){e.classList.remove('destaque-caractere','fundo-azul-claro','fundo-verde-claro');});
+    }
+    
+    // Estiliza linha, coluna e célula da "Tabula Recta"
+    function estilizar(row,col){
+        document.querySelectorAll('#tabula-cols .col-'+col).forEach(function(e){e.classList.add('fundo-verde-escuro')});
+        document.querySelectorAll('#tabula-rows .row-'+row).forEach(function(e){e.classList.add('fundo-azul-escuro')});
+        document.querySelectorAll('.tabula-cell.row-'+row).forEach(function(e){e.classList.add('fundo-azul-claro')});
+        document.querySelectorAll('.tabula-cell.col-'+col).forEach(function(e){e.classList.add('fundo-verde-claro')});
+        document.getElementById(row+'-'+col).classList.add('destaque-caractere');
+    }
+    
+    // Exibe a mensagem criptografada
+    function exibirMensagemCriptografada(criptografada){
+        document.getElementById('mensagem-criptografada').value = criptografada;
+    }
+</script>
+</html>
