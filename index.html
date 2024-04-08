@@ -29,12 +29,23 @@
             grid-template-columns: 1fr 2fr 1fr;
             grid-template-areas: '. container .';
         }
+
         #container{
             padding: 20px;
             grid-area: container;
             background:var(--background);
             box-shadow: 0px 0px 5px 0px var(--shadow);
             border-radius: 5px;
+        }
+
+        @media only screen and (max-width: 600px) {
+            body{
+                grid-template-columns: 1fr;
+                grid-template-areas: 'container';
+            }
+            #container{
+                padding: 10px;
+            }
         }
         
         .tabula-recta {
